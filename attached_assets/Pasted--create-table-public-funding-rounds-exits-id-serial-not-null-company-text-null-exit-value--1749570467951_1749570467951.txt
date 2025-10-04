@@ -1,0 +1,106 @@
+
+create table public.funding_rounds_exits (
+  id serial not null,
+  company text null,
+  exit_value_billions numeric(10, 2) null,
+  exit_type text null,
+  total_funding_millions numeric(15, 2) null,
+  industry text null,
+  deal_closed_date date null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint funding_rounds_exits_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_exits_company on public.funding_rounds_exits using btree (company) TABLESPACE pg_default;
+
+create index IF not exists idx_exits_exit_value on public.funding_rounds_exits using btree (exit_value_billions) TABLESPACE pg_default;
+
+create index IF not exists idx_exits_exit_type on public.funding_rounds_exits using btree (exit_type) TABLESPACE pg_default;
+
+create index IF not exists idx_exits_industry on public.funding_rounds_exits using btree (industry) TABLESPACE pg_default;
+
+create index IF not exists idx_exits_deal_date on public.funding_rounds_exits using btree (deal_closed_date) TABLESPACE pg_default;
+
+
+create table public.funding_rounds_ma_deals (
+  id serial not null,
+  announced_date date null,
+  acquiring_company text null,
+  acquired_company text null,
+  deal_size_billions numeric(20, 3) null,
+  deal_size_original text null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint funding_rounds_ma_deals_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_deals_date on public.funding_rounds_ma_deals using btree (announced_date) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_deals_acquirer on public.funding_rounds_ma_deals using btree (acquiring_company) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_deals_acquired on public.funding_rounds_ma_deals using btree (acquired_company) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_deals_size on public.funding_rounds_ma_deals using btree (deal_size_billions) TABLESPACE pg_default;
+
+
+create table public.funding_rounds_megadeals (
+  id serial not null,
+  rank integer null,
+  value_usd numeric(20, 2) null,
+  acquired_country text null,
+  acquired_entity text null,
+  acquirer_country text null,
+  acquirer_entity text null,
+  year integer null,
+  transaction_type text null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint funding_rounds_megadeals_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_rank on public.funding_rounds_megadeals using btree (rank) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_year on public.funding_rounds_megadeals using btree (year) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_acquirer on public.funding_rounds_megadeals using btree (acquirer_entity) TABLESPACE pg_default;
+
+create index IF not exists idx_ma_acquired on public.funding_rounds_megadeals using btree (acquired_entity) TABLESPACE pg_default;
+
+
+
+create table public.funding_rounds_us_sfd_23 (
+  id serial not null,
+  company text null,
+  amount numeric(20, 2) null,
+  lead_investors text null,
+  valuation numeric(20, 2) null,
+  industry text null,
+  date_reported date null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint funding_rounds_us_sfd_23_pkey primary key (id)
+) TABLESPACE pg_default;
+
+
+
+create table public.funding_rounds_us_sfd_24 (
+  id serial not null,
+  company text null,
+  amount numeric(20, 2) null,
+  lead_investors text null,
+  valuation numeric(20, 2) null,
+  industry text null,
+  date_reported date null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint funding_rounds_us_sfd_24_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_funding_rounds_company on public.funding_rounds_us_sfd_24 using btree (company) TABLESPACE pg_default;
+
+create index IF not exists idx_funding_rounds_amount on public.funding_rounds_us_sfd_24 using btree (amount) TABLESPACE pg_default;
+
+create index IF not exists idx_funding_rounds_industry on public.funding_rounds_us_sfd_24 using btree (industry) TABLESPACE pg_default;
+
+create index IF not exists idx_funding_rounds_date on public.funding_rounds_us_sfd_24 using btree (date_reported) TABLESPACE pg_default;

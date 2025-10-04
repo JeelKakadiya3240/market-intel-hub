@@ -1,0 +1,113 @@
+All filter only have values Equals or Not equals conditon in them in the api, and currently the filters such as revenue, employee, monthly visitors, year founded does not work.
+Modify the filters with the below:
+
+# BUSINESS TYPE
+In Business Type filter show the below values for suggestions:
+- EDUCATIONAL INSTITUTIONS
+- GOVERNMENT AGENCIES
+- NONPROFITS
+- PARTNERSHIPS
+- PRIVATELY HELD
+- PUBLIC COMPANIES
+- SELF-EMPLOYED
+- SOLE PROPRIETORSHIPS
+
+This value comes in the api resonse in the below filed:
+example:
+businessType : "educational-institution"
+
+
+# MAIN INDUSTRY
+There are two fields in api response,
+1. industry
+2. industires
+
+Example 1:
+industry : "higher-education" 
+
+Example 2:
+industries :
+[
+"research-services" ,
+"education" ,
+"professional-training-and-coaching" ,
+"academic-calendars" ,
+"libraries" ,
+"career-services" ,
+"student-resources" ,
+"higher-education" ,
+"research" ,
+"university" 
+]
+
+
+# TOTAL EMPLOYEES
+In Total Employees add the suggestion for the below values, and the users should only be able to pick from the below:
+
+- 1 - 10
+- 1000 - 5000
+- 10 - 50
+- 200 - 500
+- 5000 - 10000
+- 50 - 200
+- 500 - 1000
+- OVER 10000
+
+The below field contains the detials of total employees in api response:
+Example: totalEmployees : "200-500"
+
+
+# MONTHLY VISITORS
+Add the below fixed suggestions for monthly visitors:
+
+- 100k - 500k
+- 100M - 500M
+- 10K - 50K
+- 10M - 50M
+- 1M - 10M
+- 500K - 1M
+- 500M - 1B
+- 50K - 100K
+- 50M - 100M
+- OVER 1B
+
+The below field contains the value for monthly visitors:
+Example: analytics : { monthlyVisitors :"10m-50m" }
+
+
+# REVENUE
+Add the below fixed value in suggestion for this, user should only be able to search using this:
+
+- $1 MILLION - $10 MILLION
+- $10 MILLION - $50 MILLION
+- $100 MILLION - $200 MILLION
+- $200 MILLION - $1 BILLION
+- $50 MILLION - $100 MILLION
+- OVER $1 BILLION
+- UNDER $1 MILLION
+
+The below field contains the value for revenue:
+Example: finances : { revenue : "over-1b" , }
+
+# YEAR FOUNDED:
+
+The year founded conatins the value in the below field of api response:
+Example: yearFounded : 1971
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

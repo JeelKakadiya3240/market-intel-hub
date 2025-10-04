@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Test</title>
+</head>
+<body>
+    <h3>Testing Investor Images</h3>
+    <img src="https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/investors/images/1.jpg" alt="Test 1" style="width:100px;height:100px;" />
+    <img src="https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/investors/1.jpg" alt="Test 2" style="width:100px;height:100px;" />
+    <img src="https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/images/1.jpg" alt="Test 3" style="width:100px;height:100px;" />
+    
+    <script>
+        // Test different URL formats
+        const urls = [
+            'https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/investors/images/1.jpg',
+            'https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/investors/1.jpg',
+            'https://kluqlibhlkcsurighyczd.supabase.co/storage/v1/object/public/images/1.jpg'
+        ];
+        
+        urls.forEach((url, index) => {
+            fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    console.log(`URL ${index + 1}: ${response.status} - ${url}`);
+                })
+                .catch(error => {
+                    console.log(`URL ${index + 1}: Error - ${url}`, error);
+                });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+the api docs:
+ GET:
+https://api.thecompaniesapi.com/v2/companies?token=XXXXXX
+
+POST:
+https://api.thecompaniesapi.com/v2/companies?token=XXXXXX
+
+
+Parameters:
+# query
+string
+(required)
+An array of conditions the companies must match.
+
+Make sure this parameter is stringified and encoded.
+
+# Industries:
+conditions that can be implemented
+Includes
+Do not include
+Exact equals
+
+
+Educational Institutions
+
+Government Agencies
+
+Nonprofits
+
+Partnerships
+
+Privately Held
+
+Public Companies
+
+Self-Employed
+
+Sole Proprietorships
+
+
+# Country
+Conditions: Equals or Not equals
+
+#Buinsess Type:
+Conditions: Equals or Not equals
+
+Educational Institutions
+
+Government Agencies
+
+Nonprofits
+
+Partnerships
+
+Privately Held
+
+Public Companies
+
+Self-Employed
+
+Sole Proprietorships
+
+
+Get endpoint which defines search criteria
+https://api.thecompaniesapi.com/v2/companies?query=%5B%7B%22attribute%22%3A%22about.industries%22%2C%22operator%22%3A%22or%22%2C%22sign%22%3A%22equals%22%2C%22values%22%3A%5B%5D%7D%2C%7B%22attribute%22%3A%22locations.headquarters.country.code%22%2C%22operator%22%3A%22or%22%2C%22sign%22%3A%22equals%22%2C%22values%22%3A%5B%22us%22%2C%22fr%22%2C%22gb%22%5D%7D%2C%7B%22attribute%22%3A%22about.businessType%22%2C%22operator%22%3A%22or%22%2C%22sign%22%3A%22equals%22%2C%22values%22%3A%5B%5D%7D%5D&token=XXXXXX&token=XXXXXX
+
+
+
+
+domainsToExclude
+string
+(optional)
+A list of comma-separated domains to exclude from the results.
+/companies?domainsToExclude=amazon.com,pearson.com
+
+
+linkedinToExclude
+string
+(optional)
+A list of comma-separated LinkedIn URLs to exclude from the results.
+
+/companies?linkedinToExclude=https://www.linkedin.com/company/amazon,https://www.linkedin.com/company/pearson
+
+page
+number
+(optional)
+The page to fetch (default to 1).
+
+/companies?page=1
+
+search
+string
+(optional)
+An additional search query applied to the company name or domain.
+
+/companies?search=amazon
+
+searchFields
+array
+(optional)
+Define the fields to search.
+
+/companies?searchFields[]=domain&searchFields[]=name
+
+Possible values
+
+about.name
+domain.domain
+simplified
+boolean
+(optional)
+Return a simplified version of the companies (no credits deducted but limitation are applied on the free plan). It is useful for previewing the data before fetching the full version. Default to false.
+
+/companies?simplified=true
+
+Possible values
+
+false
+true
+size
+number
+(optional)
+The number of companies to be returned (between 1 and 100). Default to 10.
+
+/companies?size=10
+
+sortFields
+string
+(optional)
+An array of multiple fields combined to sort the results.
+
+…/companies?sortFields=%5B%7B%22key%22%3A%22meta.score%22%2C%22order%22%3A%22desc%22%7D%5D
+
+Make sure this parameter is stringified and encoded.
+
+
+
+sortKey
+string
+(optional)
+The field to sort the results.
+
+…/companies?sortKey=meta.score
+
+Possible values
+
+about.businessType
+about.industries
+about.industry
+about.name
+about.totalEmployees
+about.yearFounded
+analytics.monthlyVisitors
+apps
+codes.naics
+codes.sic
+contacts
+domain.domain
+domain.tld
+finances.revenue
+locations.headquarters.city.code
+locations.headquarters.country.code
+locations.headquarters.county.code
+locations.headquarters.state.code
+meta.score
+meta.syncedAt
+socials
+technologies.active
+urls
+sortOrder
+string
+(optional)
+The order to sort the results.
+
+…/companies?sortOrder=asc
+
+Possible values
+
+asc
+desc
