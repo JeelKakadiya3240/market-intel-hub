@@ -4938,70 +4938,96 @@ export class SupabaseStorage implements IStorage {
     stateDistribution: Array<{ name: string; value: number }>;
   }> {
     try {
-      console.log("⚡ Fetching startup analytics using database-level aggregation...");
+      console.log("⚡ Using optimized database functions for maximum speed...");
 
-      // Use database-level aggregation for maximum performance
-      // This is 100x faster than fetching all records
-      
-      // Country distribution - database aggregation
-      const { data: countryData, error: countryError } = await supabase
-        .from("companies_startups")
-        .select("country, count(*)")
-        .not("country", "is", null)
-        .group("country");
+      // Use database RPC functions for ultra-fast aggregation
+      const [countryResult, stateResult, industryResult] = await Promise.all([
+        // Country distribution using database function
+        supabase.rpc('get_startup_countries'),
+        
+        // State distribution using database function  
+        supabase.rpc('get_startup_states'),
+        
+        // Industry distribution using database function
+        supabase.rpc('get_startup_industries')
+      ]);
 
-      // State distribution - database aggregation  
-      const { data: stateData, error: stateError } = await supabase
-        .from("companies_startups")
-        .select("state, count(*)")
-        .not("state", "is", null)
-        .group("state");
-
-      // Industry distribution from tags - simplified approach
-      const { data: tagsData, error: tagsError } = await supabase
-        .from("companies_startups")
-        .select("tags")
-        .not("tags", "is", null)
-        .limit(1000); // Limit to prevent memory issues
-
-      if (countryError || stateError || tagsError) {
-        console.error("Database aggregation errors:", { countryError, stateError, tagsError });
-        // Fallback to simple counting
-        return this.getStartupsAnalyticsFallback();
+      if (countryResult.error || stateResult.error || industryResult.error) {
+        console.error("Database function errors:", { 
+          countryError: countryResult.error, 
+          stateError: stateResult.error, 
+          industryError: industryResult.error 
+        });
+        // Fallback to simple aggregation
+        return this.getStartupsAnalyticsSimple();
       }
 
-      console.log(`✅ Database aggregation complete - Countries: ${countryData?.length || 0}, States: ${stateData?.length || 0}, Tags: ${tagsData?.length || 0}`);
-
-      // Process industry distribution from tags (simplified)
-      const industryMap = new Map<string, number>();
-      tagsData?.forEach((item: any) => {
-        if (item.tags) {
-          const tags = item.tags.split(",");
-          tags.forEach((tag: string) => {
-            const industry = tag.trim();
-            if (industry && industry.length > 1) {
-              industryMap.set(industry, (industryMap.get(industry) || 0) + 1);
-            }
-          });
-        }
-      });
+      console.log(`✅ Database functions complete - Countries: ${countryResult.data?.length || 0}, States: ${stateResult.data?.length || 0}, Industries: ${industryResult.data?.length || 0}`);
 
       return {
-        countryDistribution: (countryData || []).map((item: any) => ({
-          name: item.country || "Unknown",
-          value: item.count || 1
+        countryDistribution: (countryResult.data || []).map((item: any) => ({
+          name: item.name || item.country || "Unknown",
+          value: item.value || item.count || 0
         })),
-        stateDistribution: (stateData || []).map((item: any) => ({
-          name: item.state || "Unknown", 
-          value: item.count || 1
+        stateDistribution: (stateResult.data || []).map((item: any) => ({
+          name: item.name || item.state || "Unknown",
+          value: item.value || item.count || 0
         })),
-        industryDistribution: Array.from(industryMap.entries()).map(
-          ([name, value]) => ({ name, value }),
-        ),
+        industryDistribution: (industryResult.data || []).map((item: any) => ({
+          name: item.name || item.industry || "Unknown",
+          value: item.value || item.count || 0
+        })),
       };
     } catch (error) {
       console.error("Error fetching startup analytics:", error);
-      return this.getStartupsAnalyticsFallback();
+      return this.getStartupsAnalyticsSimple();
+    }
+  }
+
+  // Simple aggregation fallback (faster than batch processing)
+  private async getStartupsAnalyticsSimple(): Promise<{
+    countryDistribution: Array<{ name: string; value: number }>;
+    industryDistribution: Array<{ name: string; value: number }>;
+    stateDistribution: Array<{ name: string; value: number }>;
+  }> {
+    try {
+      console.log("🔄 Using simple database aggregation...");
+      
+      // Use simple database aggregation (much faster than batch processing)
+      const [countryResult, stateResult] = await Promise.all([
+        supabase
+          .from("companies_startups")
+          .select("country, count(*)")
+          .not("country", "is", null)
+          .group("country")
+          .order("count", { ascending: false }),
+        
+        supabase
+          .from("companies_startups")
+          .select("state, count(*)")
+          .not("state", "is", null)
+          .group("state")
+          .order("count", { ascending: false })
+      ]);
+
+      return {
+        countryDistribution: (countryResult.data || []).map((item: any) => ({
+          name: item.country || "Unknown",
+          value: item.count || 0
+        })),
+        stateDistribution: (stateResult.data || []).map((item: any) => ({
+          name: item.state || "Unknown",
+          value: item.count || 0
+        })),
+        industryDistribution: [] // Skip industry for speed
+      };
+    } catch (error) {
+      console.error("Simple analytics failed:", error);
+      return {
+        countryDistribution: [],
+        industryDistribution: [],
+        stateDistribution: [],
+      };
     }
   }
 
@@ -5012,44 +5038,88 @@ export class SupabaseStorage implements IStorage {
     stateDistribution: Array<{ name: string; value: number }>;
   }> {
     try {
-      console.log("🔄 Using fallback analytics method...");
+      console.log("🔄 Using fallback analytics method for ALL records...");
       
-      // Simple aggregation with limited data
-      const { data: countryData } = await supabase
-        .from("companies_startups")
-        .select("country")
-        .not("country", "is", null)
-        .limit(5000);
-
-      const { data: stateData } = await supabase
-        .from("companies_startups")
-        .select("state")
-        .not("state", "is", null)
-        .limit(5000);
-
+      // Process ALL records in batches to get complete data
+      const batchSize = 1000;
+      let offset = 0;
       const countryMap = new Map<string, number>();
       const stateMap = new Map<string, number>();
-
-      countryData?.forEach((item: any) => {
-        const country = item.country || "Unknown";
-        countryMap.set(country, (countryMap.get(country) || 0) + 1);
-      });
-
-      stateData?.forEach((item: any) => {
-        const state = item.state;
-        if (state) {
-          stateMap.set(state, (stateMap.get(state) || 0) + 1);
+      const industryMap = new Map<string, number>();
+      
+      let hasMoreData = true;
+      
+      while (hasMoreData) {
+        const { data: batchData, error } = await supabase
+          .from("companies_startups")
+          .select("country, state, tags")
+          .range(offset, offset + batchSize - 1);
+          
+        if (error) {
+          console.error("Error fetching batch:", error);
+          break;
         }
-      });
+        
+        if (!batchData || batchData.length === 0) {
+          hasMoreData = false;
+          break;
+        }
+        
+        // Process this batch
+        batchData.forEach((item: any) => {
+          // Country processing
+          if (item.country) {
+            const country = item.country;
+            countryMap.set(country, (countryMap.get(country) || 0) + 1);
+          }
+          
+          // State processing
+          if (item.state) {
+            const state = item.state;
+            stateMap.set(state, (stateMap.get(state) || 0) + 1);
+          }
+          
+          // Industry processing from tags
+          if (item.tags) {
+            const tags = item.tags.split(",");
+            tags.forEach((tag: string) => {
+              const industry = tag.trim();
+              if (industry && industry.length > 1) {
+                industryMap.set(industry, (industryMap.get(industry) || 0) + 1);
+              }
+            });
+          }
+        });
+        
+        offset += batchSize;
+        console.log(`Processed ${offset} records...`);
+        
+        // Safety check to prevent infinite loops
+        if (offset > 50000) {
+          console.log("Reached safety limit of 50,000 records");
+          break;
+        }
+      }
+
+      // Sort all distributions by count
+      const sortedCountries = Array.from(countryMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+        
+      const sortedStates = Array.from(stateMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+        
+      const sortedIndustries = Array.from(industryMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+      console.log(`✅ Fallback complete - Countries: ${sortedCountries.length}, States: ${sortedStates.length}, Industries: ${sortedIndustries.length}`);
 
       return {
-        countryDistribution: Array.from(countryMap.entries()).map(
-          ([name, value]) => ({ name, value }),
-        ),
-        stateDistribution: Array.from(stateMap.entries()).map(
-          ([name, value]) => ({ name, value }),
-        ),
-        industryDistribution: [], // Skip industry for fallback
+        countryDistribution: sortedCountries,
+        stateDistribution: sortedStates,
+        industryDistribution: sortedIndustries,
       };
     } catch (error) {
       console.error("Fallback analytics failed:", error);
@@ -5116,8 +5186,8 @@ export class SupabaseStorage implements IStorage {
           hasError = true;
         } else {
           const data = result.data || [];
-          industryData = industryData.concat(data.map(item => ({ industry: item.industry })));
-          sampleData = sampleData.concat(data.map(item => ({ 
+          industryData = industryData.concat(data.map((item: any) => ({ industry: item.industry })));
+          sampleData = sampleData.concat(data.map((item: any) => ({ 
             total_funding: item.total_funding, 
             employee_growth_percent: item.employee_growth_percent 
           })));
@@ -5459,7 +5529,7 @@ export class SupabaseStorage implements IStorage {
           region = region.trim();
           
           // If location contains city, state, country format, extract just the country
-          const parts = region.split(',').map(part => part.trim());
+          const parts = region.split(',').map((part: string) => part.trim());
           if (parts.length > 1) {
             // Take the last part as country
             region = parts[parts.length - 1];

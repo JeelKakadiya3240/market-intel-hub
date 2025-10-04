@@ -1974,10 +1974,13 @@ export default function Companies() {
                       <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                         <Globe className="h-5 w-5 text-blue-600" />
                         Country Distribution
+                        <Badge variant="secondary" className="ml-2">
+                          {startupsAnalytics?.countryDistribution?.length || 0} Countries
+                        </Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {startupsAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -1985,28 +1988,23 @@ export default function Companies() {
                         ) : (
                           <RechartsPieChart>
                             <Pie
-                              data={
-                                startupsAnalytics?.countryDistribution || []
-                              }
+                              data={startupsAnalytics?.countryDistribution || []}
                               cx="50%"
-                              cy="40%"
-                              outerRadius={80}
+                              cy="50%"
+                              outerRadius={100}
+                              innerRadius={35}
                               dataKey="value"
                             >
-                              {(
-                                startupsAnalytics?.countryDistribution || []
-                              ).map((entry, index) => (
+                              {(startupsAnalytics?.countryDistribution || []).map((entry, index) => (
                                 <Cell
                                   key={`cell-${index}`}
-                                  fill={
-                                    CHART_COLORS[index % CHART_COLORS.length]
-                                  }
+                                  fill={CHART_COLORS[index % CHART_COLORS.length]}
                                 />
                               ))}
                             </Pie>
                             <Tooltip
                               formatter={(value, name, props) => [
-                                value,
+                                `${value} companies`,
                                 props.payload.name || "Companies",
                               ]}
                               contentStyle={{
@@ -2047,7 +2045,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {startupsAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -2057,8 +2055,9 @@ export default function Companies() {
                             <Pie
                               data={startupsAnalytics?.stateDistribution || []}
                               cx="50%"
-                              cy="40%"
-                              outerRadius={80}
+                              cy="50%"
+                              outerRadius={100}
+                              innerRadius={35}
                               dataKey="value"
                             >
                               {(startupsAnalytics?.stateDistribution || []).map(
@@ -2091,7 +2090,7 @@ export default function Companies() {
                                 fontSize: "11px",
                                 color: "hsl(var(--foreground))"
                               }}
-                              payload={(startupsAnalytics?.countryDistribution || []).slice(0, 10).map((entry: any, index: number) => ({
+                              payload={(startupsAnalytics?.stateDistribution || []).slice(0, 10).map((entry: any, index: number) => ({
                                 value: `${entry.name} (${entry.value})`,
                                 type: 'rect',
                                 color: CHART_COLORS[index % CHART_COLORS.length],
@@ -2627,7 +2626,7 @@ export default function Companies() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0 pb-4">
-                        <ResponsiveContainer width="100%" height={280}>
+                        <ResponsiveContainer width="100%" height={320}>
                           {growthAnalyticsLoading ? (
                             <div className="flex items-center justify-center h-full">
                               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -3124,7 +3123,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {franchisesAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -3200,7 +3199,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {franchisesAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -3271,7 +3270,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {franchisesAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -3775,7 +3774,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {vcAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -3844,7 +3843,7 @@ export default function Companies() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 pb-4">
-                      <ResponsiveContainer width="100%" height={280}>
+                      <ResponsiveContainer width="100%" height={320}>
                         {vcAnalyticsLoading ? (
                           <div className="flex items-center justify-center h-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
