@@ -67,7 +67,7 @@ export function CompaniesTable({
         pageSize: "20"
       });
       
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/companies/external/conditions?${params}`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://market-intel-hub-henrikfennefos2.replit.app'}/api/companies/external/conditions?${params}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -102,7 +102,7 @@ export function CompaniesTable({
           pageSize: "20"
         });
         
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/companies/external/conditions?${params}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://market-intel-hub-henrikfennefos2.replit.app'}/api/companies/external/conditions?${params}`);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -118,7 +118,7 @@ export function CompaniesTable({
           pageSize: "20"
         });
         
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/companies/external/search?${params}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://market-intel-hub-henrikfennefos2.replit.app'}/api/companies/external/search?${params}`);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
