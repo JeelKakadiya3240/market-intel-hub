@@ -2205,7 +2205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paramIndex++;
       }
       if (filters.type) {
-        whereConditions.push(`type = $${paramIndex}`);
+        whereConditions.push(`profile = $${paramIndex}`);
         queryParams.push(filters.type);
         paramIndex++;
       }

@@ -767,17 +767,9 @@ export default function Investors() {
                         type="category" 
                         width={120}
                         tickFormatter={(value) => {
-                          const numValue = parseFloat(value);
-                          if (numValue >= 1000000) {
-                            // Values like 1000000.00 -> $1.0M
-                            return `$${(numValue / 1000000).toFixed(1)}M`;
-                          } else if (numValue >= 1000) {
-                            // Values like 250000.00 -> $250k
-                            return `$${(numValue / 1000).toFixed(0)}k`;
-                          } else {
-                            // Values like 1.50 -> $1.5M (assuming these are already in millions)
-                            return `$${numValue.toFixed(1)}M`;
-                          }
+                          // Values are already formatted like "$1.5M", "$25K", etc.
+                          // Just return them as-is
+                          return value;
                         }}
                       />
                       <Tooltip
@@ -785,22 +777,12 @@ export default function Investors() {
                           if (active && payload && payload.length) {
                             const data = payload[0];
                             const sweetSpotValue = data.payload?.name || label;
-                            const numValue = parseFloat(sweetSpotValue);
-                            let formattedValue;
-                            if (numValue >= 1000000) {
-                              // Values like 1000000.00 -> $1.0M
-                              formattedValue = `$${(numValue / 1000000).toFixed(1)}M`;
-                            } else if (numValue >= 1000) {
-                              // Values like 250000.00 -> $250k
-                              formattedValue = `$${(numValue / 1000).toFixed(0)}k`;
-                            } else {
-                              // Values like 1.50 -> $1.5M (assuming these are already in millions)
-                              formattedValue = `$${numValue.toFixed(1)}M`;
-                            }
+                            // Values are already formatted like "$1.5M", "$25K", etc.
+                            // Just use them as-is
                             return (
                               <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-                                <p className="font-semibold text-gray-900">{formattedValue}</p>
-                                <p className="text-sm text-green-600">{formattedValue} : {data.value?.toLocaleString() || 0}</p>
+                                <p className="font-semibold text-gray-900">{sweetSpotValue}</p>
+                                <p className="text-sm text-green-600">Count: {data.value?.toLocaleString() || 0}</p>
                               </div>
                             );
                           }
