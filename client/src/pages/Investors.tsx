@@ -84,6 +84,27 @@ interface PaginationState {
 
 type InvestorTabType = "investors" | "contacts";
 
+// Utility function to format sweet spot values
+// Based on the actual data structure from the API response
+const formatSweetSpotValue = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return value.toString();
+  
+  // Handle the actual data structure:
+  // Small values like 1.50, 2.50, 25.00 are in millions (M)
+  // Large values like 1000000.00, 500000.00 are in raw dollars (K/M)
+  if (numValue >= 1000000) {
+    return `$${(numValue / 1000000).toFixed(1)}M`;
+  } else if (numValue >= 1000) {
+    return `$${(numValue / 1000).toFixed(0)}K`;
+  } else if (numValue >= 1) {
+    return `$${numValue.toFixed(1)}M`;
+  } else {
+    return `$${numValue.toFixed(2)}M`;
+  }
+};
+
 export default function Investors() {
   const [activeTab, setActiveTab] = useState<InvestorTabType>("investors");
   const [filters, setFilters] = useState<InvestorFilters>({
@@ -173,6 +194,7 @@ export default function Investors() {
     queryFn: async () => {
       if (activeTab !== "investors") return null;
       const params = new URLSearchParams();
+      console.log("filters", filters);
       if (filters.search) params.set("search", filters.search);
       if (filters.type !== "all") params.set("type", filters.type);
       if (filters.location !== "all") params.set("location", filters.location);
@@ -180,6 +202,7 @@ export default function Investors() {
       if (filters.sweetSpot !== "all") params.set("sweetSpot", filters.sweetSpot);
       
       const response = await fetch(`/api/investors/analytics?${params.toString()}`);
+      console.log("response 111", response);
       if (!response.ok) throw new Error("Failed to fetch investor analytics");
       return response.json();
     },
@@ -755,7 +778,9 @@ export default function Investors() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
-                      data={investorAnalyticsData?.sweetSpots || []}
+                      data={(investorAnalyticsData?.sweetSpots || [])
+                        .sort((a: any, b: any) => b.value - a.value)
+                        .slice(0, 10)}
                       layout="vertical"
                       margin={{ left: 40, right: 20, top: 10, bottom: 10 }}
                       barCategoryGap={16}
@@ -767,9 +792,8 @@ export default function Investors() {
                         type="category" 
                         width={120}
                         tickFormatter={(value) => {
-                          // Values are already formatted like "$1.5M", "$25K", etc.
-                          // Just return them as-is
-                          return value;
+                          // Format the sweet spot values with proper currency formatting
+                          return formatSweetSpotValue(value);
                         }}
                       />
                       <Tooltip
@@ -777,11 +801,10 @@ export default function Investors() {
                           if (active && payload && payload.length) {
                             const data = payload[0];
                             const sweetSpotValue = data.payload?.name || label;
-                            // Values are already formatted like "$1.5M", "$25K", etc.
-                            // Just use them as-is
+                            // Format the sweet spot value with proper currency formatting
                             return (
                               <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-                                <p className="font-semibold text-gray-900">{sweetSpotValue}</p>
+                                <p className="font-semibold text-gray-900">{formatSweetSpotValue(sweetSpotValue)}</p>
                                 <p className="text-sm text-green-600">Count: {data.value?.toLocaleString() || 0}</p>
                               </div>
                             );
@@ -1024,7 +1047,7 @@ export default function Investors() {
                         return sweetSpotsData.map((spot: any) => (
                           <SelectItem key={spot.name} value={spot.name} className="py-2">
                             <span className="font-medium text-slate-900 dark:text-slate-100">
-                              {spot.name} ({spot.value.toLocaleString()})
+                              {formatSweetSpotValue(spot.name)} ({spot.value.toLocaleString()})
                             </span>
                           </SelectItem>
                         ));

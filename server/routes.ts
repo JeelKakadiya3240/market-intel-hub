@@ -2176,7 +2176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dedicated analytics endpoint for Investors - fetches filtered data for chart synchronization
   app.get("/api/investors/analytics", async (req, res) => {
     try {
+      console.log("req.query", req.query);
       const { search, type, location, investmentRange, sweetSpot } = req.query;
+
+      console.log("filters 222", search, type, location, investmentRange, sweetSpot);
       const filters = {
         search: search as string,
         type: type as string,
@@ -2194,96 +2197,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cached);
       }
 
-      // Build WHERE clause from filters
-      let whereConditions = [];
-      let queryParams = [];
-      let paramIndex = 1;
+      // Use the comprehensive get_investor_analytics_working function
+      const analyticsResult = await supabaseAdmin.rpc('get_investor_analytics_working', {
+        search_term: filters.search || '',
+        investor_type: filters.type || '',
+        location_filter: filters.location || '',
+        investment_range: filters.investmentRange || '',
+        sweet_spot_filter: filters.sweetSpot || ''
+      });
 
-      if (filters.search) {
-        whereConditions.push(`name ILIKE $${paramIndex}`);
-        queryParams.push(`%${filters.search}%`);
-        paramIndex++;
+      console.log("analyticsResult", analyticsResult);
+
+      if (analyticsResult.error) {
+        console.error("Database function error:", analyticsResult.error);
+        return res.status(500).json({ message: "Failed to fetch investor analytics" });
       }
-      if (filters.type) {
-        whereConditions.push(`profile = $${paramIndex}`);
-        queryParams.push(filters.type);
-        paramIndex++;
-      }
-    if (filters.location) {
-      whereConditions.push(`location ILIKE $${paramIndex}`);
-      queryParams.push(`%${filters.location}%`);
-      paramIndex++;
-    }
-    if (filters.investmentRange && filters.investmentRange !== "all") {
-      const mapRangeToCondition = (r: string) => {
-        switch (r) {
-          case '$0-1M': return 'investment_max::numeric <= 1';
-          case '$1-5M': return 'investment_max::numeric > 1 AND investment_max::numeric <= 5';
-          case '$5-10M': return 'investment_max::numeric > 5 AND investment_max::numeric <= 10';
-          case '$10-25M': return 'investment_max::numeric > 10 AND investment_max::numeric <= 25';
-          case '$25-50M': return 'investment_max::numeric > 25 AND investment_max::numeric <= 50';
-          case '$50-100M': return 'investment_max::numeric > 50 AND investment_max::numeric <= 100';
-          case '$100M+': return 'investment_max::numeric > 100';
-          default: return null;
-        }
-      };
-      const cond = mapRangeToCondition(filters.investmentRange);
-      if (cond) whereConditions.push(`(${cond})`);
-    }
 
-      const whereClause = whereConditions.length > 0 ? ` AND ${whereConditions.join(' AND ')}` : '';
-
+      // Process the results to match the expected format
+      const data = analyticsResult.data || [];
       
-      // Use database functions to get analytics for ALL 30,514 records efficiently
-      const [locationsResult, typesResult, sweetSpotsResult, totalCountResult, rangesResult] = await Promise.all([
-        // Locations distribution - gets top 20 locations
-        supabaseAdmin.rpc('get_investor_locations', { 
-          where_sql: whereClause, 
-          params: queryParams.length > 0 ? queryParams : null 
-        }),
-        
-        // Types distribution  
-        supabaseAdmin.rpc('get_investor_types', { 
-          where_sql: whereClause, 
-          params: queryParams.length > 0 ? queryParams : null 
-        }),
-        
-        // Sweet spots distribution - gets top 10 sweet spots
-        supabaseAdmin.rpc('get_investor_sweet_spots', { 
-          where_sql: whereClause, 
-          params: queryParams.length > 0 ? queryParams : null 
-        }),
-        
-        // Total count
-        supabaseAdmin.rpc('get_investor_count', { 
-          where_sql: whereClause, 
-          params: queryParams.length > 0 ? queryParams : null 
-        }),
-        
-        // Investment ranges distribution - gets top 10 investment ranges
-        supabaseAdmin.rpc('get_investor_investment_ranges', { 
-          where_sql: whereClause, 
-          params: queryParams.length > 0 ? queryParams : null 
-        })
-      ]);
+      // Group results by category
+      const locations = data.filter((item: any) => item.category === 'location');
+      const types = data.filter((item: any) => item.category === 'type');
+      const sweetSpots = data.filter((item: any) => item.category === 'sweet_spot');
+      const investmentRanges = data.filter((item: any) => item.category === 'investment_range');
 
-
-      // Use the results from database functions directly
-      const analyticsResult = {
-        locations: locationsResult.data || [],
-        types: typesResult.data || [],
-        sweetSpots: sweetSpotsResult.data || [],
-        investmentRanges: (rangesResult.data || []).map((item: any) => ({
-          name: item.range || item.name,
-          value: item.value
-        })),
-        totalRecords: totalCountResult.data?.[0]?.cnt || 0
+      const result = {
+        locations: locations.map((item: any) => ({ name: item.name, value: item.value })),
+        types: types.map((item: any) => ({ name: item.name, value: item.value })),
+        sweetSpots: sweetSpots.map((item: any) => ({ name: item.name, value: item.value })),
+        investmentRanges: investmentRanges.map((item: any) => ({ name: item.name, value: item.value })),
+        totalRecords: data.length
       };
-
 
       // Cache the result
-      setCachedAnalytics(cacheKey, analyticsResult);
-      return res.json(analyticsResult);
+      setCachedAnalytics(cacheKey, result);
+      return res.json(result);
     } catch (error) {
       console.error("Error in /api/investors/analytics:", error);
       res.status(500).json({ message: "Failed to fetch investor analytics" });
