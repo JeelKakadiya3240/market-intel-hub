@@ -920,20 +920,19 @@ export default function Investors() {
                         ? (dropdownData?.types || [])
                         : (dropdownData || []).reduce((acc: any[], item: any) => {
                             const type = item.investorType || "Unknown";
-                            const existing = acc.find(t => t.type === type);
+                            const existing = acc.find(t => t.name === type);
                             if (existing) {
                               existing.value++;
                             } else {
-                              acc.push({ type, value: 1 });
+                              acc.push({ name: type, value: 1 });
                             }
                             return acc;
                           }, []);
                       
                       return typesData.map((type: any) => (
-                        <SelectItem key={type.type} value={type.type} className="py-2">
+                        <SelectItem key={type.name || type.type} value={type.name || type.type} className="py-2">
                           <span className="font-medium text-slate-900 dark:text-slate-100">
-                            {type.type === 'VC' ? 'Venture Capital' : 
-                             type.type === 'Venture Capital' ? 'Venture Capital' : type.type}
+                            {type.name || type.type} ({type.value.toLocaleString()})
                           </span>
                         </SelectItem>
                       ));
@@ -958,19 +957,19 @@ export default function Investors() {
                         ? (dropdownData?.locations || [])
                         : (dropdownData || []).reduce((acc: any[], item: any) => {
                             const location = item.location || item.country || "Unknown";
-                            const existing = acc.find(l => l.location === location);
+                            const existing = acc.find(l => l.name === location);
                             if (existing) {
                               existing.value++;
                             } else {
-                              acc.push({ location, value: 1 });
+                              acc.push({ name: location, value: 1 });
                             }
                             return acc;
                           }, []).sort((a: any, b: any) => b.value - a.value);
                       
                       return locationsData.map((location: any) => (
-                        <SelectItem key={location.location} value={location.location} className="py-2">
+                        <SelectItem key={location.name || location.location} value={location.name || location.location} className="py-2">
                           <span className="font-medium text-slate-900 dark:text-slate-100">
-                            {location.location}
+                            {location.name || location.location} ({location.value.toLocaleString()})
                           </span>
                         </SelectItem>
                       ));
@@ -987,14 +986,21 @@ export default function Investors() {
                     <SelectTrigger className="w-40 border-slate-200">
                       <SelectValue placeholder="Investment Range" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-96 overflow-y-auto">
                       <SelectItem value="all">All Investment Ranges</SelectItem>
-                      <SelectItem value="1-5">$1-5M</SelectItem>
-                      <SelectItem value="5-10">$5-10M</SelectItem>
-                      <SelectItem value="10-25">$10-25M</SelectItem>
-                      <SelectItem value="25-50">$25-50M</SelectItem>
-                      <SelectItem value="50-100">$50-100M</SelectItem>
-                      <SelectItem value="100">$100M+</SelectItem>
+                      {(() => {
+                        // Use unfiltered data for dropdown options so all investment ranges always appear
+                        const dropdownData = optionsData;
+                        const investmentRangesData = dropdownData?.investmentRanges || [];
+                        
+                        return investmentRangesData.map((range: any) => (
+                          <SelectItem key={range.name} value={range.name} className="py-2">
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {range.name} ({range.value.toLocaleString()})
+                            </span>
+                          </SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                 )}
@@ -1008,14 +1014,21 @@ export default function Investors() {
                     <SelectTrigger className="w-36 border-slate-200">
                       <SelectValue placeholder="Sweet Spot" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-96 overflow-y-auto">
                       <SelectItem value="all">Any Sweet Spot</SelectItem>
-                      <SelectItem value="1-5">$1-5M</SelectItem>
-                      <SelectItem value="5-10">$5-10M</SelectItem>
-                      <SelectItem value="10-25">$10-25M</SelectItem>
-                      <SelectItem value="25-50">$25-50M</SelectItem>
-                      <SelectItem value="50-100">$50-100M</SelectItem>
-                      <SelectItem value="100">$100M+</SelectItem>
+                      {(() => {
+                        // Use unfiltered data for dropdown options so all sweet spots always appear
+                        const dropdownData = optionsData;
+                        const sweetSpotsData = dropdownData?.sweetSpots || [];
+                        
+                        return sweetSpotsData.map((spot: any) => (
+                          <SelectItem key={spot.name} value={spot.name} className="py-2">
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {spot.name} ({spot.value.toLocaleString()})
+                            </span>
+                          </SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                 )}
