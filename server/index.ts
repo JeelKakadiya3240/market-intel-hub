@@ -6,6 +6,7 @@ dotenv.config();
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { SupabaseStorage } from "./storage";
 
 // Graceful environment validation for deployment
 function validateEnvironment(): void {
@@ -20,6 +21,17 @@ function validateEnvironment(): void {
   }
   
   console.log('✅ Environment validation completed');
+}
+
+// Database warm-up function to prevent cold start timeouts
+async function warmupDatabase() {
+  try {
+    const storage = new SupabaseStorage();
+    await storage.getGrants(1, 0); // Simple warm-up query
+    console.log('✅ Database warmed up successfully');
+  } catch (error) {
+    console.log('⚠️ Database warm-up failed:', error instanceof Error ? error.message : 'Unknown error');
+  }
 }
 
 const app = express();
@@ -131,7 +143,7 @@ app.use((req, res, next) => {
     process.exit(1);
   });
 
-  serverInstance = server.listen(serverOptions, () => {
+  serverInstance = server.listen(serverOptions, async () => {
     log(`✅ Server successfully started and serving on port ${port}`);
     log(`🌍 Server accessible at http://0.0.0.0:${port}`);
     log(`📡 Health check available at: http://0.0.0.0:${port}/health`);
@@ -140,6 +152,10 @@ app.use((req, res, next) => {
     } else {
       log(`🚀 Running in production mode`);
     }
+    
+    // Warm up database to prevent cold start timeouts
+    log(`🔥 Warming up database connection...`);
+    await warmupDatabase();
   }).on('error', (error: any) => {
     console.error(`❌ Server startup error:`, error.message);
     
