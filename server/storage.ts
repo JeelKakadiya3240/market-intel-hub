@@ -193,8 +193,26 @@ let supabaseAdmin: any = null;
 
 try {
   validateServerSupabaseConfig();
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        'X-Client-Info': 'supabase-js',
+      },
+    },
+    db: {
+      schema: 'public',
+    },
+  });
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    global: {
+      headers: {
+        'X-Client-Info': 'supabase-js',
+      },
+    },
+    db: {
+      schema: 'public',
+    },
+  });
   console.log("✅ Supabase clients initialized successfully");
 } catch (error) {
   console.error(
@@ -2214,9 +2232,17 @@ export class SupabaseStorage implements IStorage {
       query = query.ilike("funded_under", `%${filters.fundedUnder}%`);
     }
 
-    const { data, error } = await query
+    // Add timeout handling for grants query
+    const queryPromise = query
       .order("overall_budget", { ascending: false, nullsLast: true })
       .range(safeOffset, safeOffset + safeLimit - 1);
+
+    // Wrap in timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30000);
+    });
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) {
       console.error("Error fetching grants:", error);
