@@ -624,7 +624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         programme,
         fundedUnder,
-        limit = "25",
+        limit = "20",
         offset = "0",
       } = req.query;
       const limitNum = parseInt(limit as string);
@@ -637,8 +637,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fundedUnder: fundedUnder as string,
       };
 
+      // Create cache key for first page with no filters
+      const hasFilters = search || (status && status !== 'all') || (programme && programme !== 'all') || (fundedUnder && fundedUnder !== 'all');
+      const isFirstPage = offsetNum === 0;
+      const cacheKey = `grants-page-0-limit-${limitNum}`;
+
+      // Try to get cached data for first page with no filters
+      if (!hasFilters && isFirstPage) {
+        const cached = getCachedAnalytics(cacheKey);
+        if (cached) {
+          return res.json(cached);
+        }
+      }
 
       const grants = await storage.getGrants(limitNum, offsetNum, filters);
+
+      // Cache first page with no filters
+      if (!hasFilters && isFirstPage) {
+        setCachedAnalytics(cacheKey, grants);
+      }
 
       res.json(grants);
     } catch (error) {

@@ -2176,7 +2176,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getGrants(
-    limit = 50,
+    limit = 20,
     offset = 0,
     filters?: {
       search?: string;
@@ -2185,8 +2185,8 @@ export class SupabaseStorage implements IStorage {
       fundedUnder?: string;
     },
   ): Promise<Grant[]> {
-    // Ensure reasonable limits to prevent timeouts
-    const safeLimit = Math.min(limit, 100);
+    // Ensure reasonable limits to prevent timeouts - strict limit for large dataset
+    const safeLimit = Math.min(limit, 50);
     const safeOffset = Math.max(offset, 0);
 
     let query = supabase
