@@ -15,6 +15,18 @@ let supabaseAdmin: any = null;
 if (supabaseUrl && supabaseServiceKey) {
   supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 }
+// normalize helper — paste near top of routes file
+function getFirstQueryValue(req: any, ...keys: string[]) {
+  for (const k of keys) {
+    const v = req.query?.[k];
+    if (v !== undefined && v !== null) {
+      const s = String(v).trim();
+      if (s !== "") return s;
+    }
+  }
+  return undefined;
+}
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Cloud Run readiness probes
@@ -2246,30 +2258,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type,
         location,
         investmentRange,
-        sweetSpot,
         limit = "25",
         page = "1",
       } = req.query;
-      const limitNum = parseInt(limit as string);
-      const pageNum = parseInt(page as string);
+  
+      const limitNum = parseInt(limit as string, 10) || 25;
+      const pageNum = parseInt(page as string, 10) || 1;
       const offset = (pageNum - 1) * limitNum;
-
-      const filters = {
-        search: search as string,
-        type: type as string,
-        location: location as string,
-        investmentRange: investmentRange as string,
-        sweetSpot: sweetSpot as string,
+  
+      // accept camelCase, snake_case, and plain
+      const sweetSpotRaw = getFirstQueryValue(req, "sweetspot", "sweet_spot", "sweetSpot");
+  
+      // normalize numeric formats: remove commas, trim, handle percent-encoded dot etc.
+      let sweetSpotNum: number | undefined = undefined;
+      if (sweetSpotRaw !== undefined) {
+        // remove commas and any non-numeric trailing characters except dot
+        const cleaned = String(sweetSpotRaw).replace(/,/g, "");
+        // attempt numeric parse
+        const maybeNum = Number(cleaned);
+        if (!Number.isNaN(maybeNum)) {
+          sweetSpotNum = maybeNum;
+        } else {
+          // keep undefined and pass raw string if DB expects string comparisons
+          console.warn("Could not parse sweetSpot as number, will pass raw:", sweetSpotRaw);
+        }
+      }
+  
+      // Build filters to pass to storage layer. Use string OR number depending on parse success.
+      const filters: {
+        search?: string;
+        type?: string;
+        location?: string;
+        investmentRange?: string;
+        sweetSpot?: string;
+      } = {
+        search: (search as string) || undefined,
+        type: (type as string) || undefined,
+        location: (location as string) || undefined,
+        investmentRange: (investmentRange as string) || undefined,
+        // always pass a string (so types match storage layer)
+        sweetSpot:
+          sweetSpotNum !== undefined && !Number.isNaN(sweetSpotNum)
+            ? String(sweetSpotNum)
+            : (sweetSpotRaw as string | undefined),
       };
-
+      
+  
+      console.log("DEBUG /api/investors incoming request:", {
+        url: req.originalUrl,
+        client: req.headers["user-agent"],
+        filters,
+        limitNum,
+        offset,
+      });
+  
+      // TEMP debugging: uncomment to return parsed filters without hitting DB
+      // return res.json({ debugFilters: filters, limitNum, offset, url: req.originalUrl });
+  
       const investors = await storage.getInvestors(limitNum, offset, filters);
-
       res.json(investors);
     } catch (error) {
       console.error("Error in /api/investors:", error);
       res.status(500).json({ message: "Failed to fetch investors" });
     }
   });
+  
+  
+  
+  
 
   // Quick endpoint to get actual profile types
   app.get("/api/investors/profile-types", async (req, res) => {

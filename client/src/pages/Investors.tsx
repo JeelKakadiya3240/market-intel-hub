@@ -729,9 +729,9 @@ export default function Investors() {
                       >
                         {(() => {
                           if (!investorData) return 0;
-                          return investorData.filter((inv: any) => 
-                            inv.location || inv.city || inv.country
-                          ).length;
+                          const arr = Array.isArray(investorData) ? investorData : investorData?.investors ?? []; // adapt if API wraps
+                          return arr.filter((inv: any) => inv && (inv.location || inv.city || inv.country)).length;
+
                         })()}
                       </text>
                       <text

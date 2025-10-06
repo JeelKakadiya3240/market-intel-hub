@@ -21,6 +21,75 @@ function setCachedAnalytics(key: string, data: any): void {
   console.log(`💾 Cached analytics for ${key}`);
 }
 
+function parseMoneyTokenToMillions(token: string): number | null {
+  if (!token || typeof token !== "string") return null;
+  const t = token.trim().toLowerCase().replace(/\s+/g, "");
+  // Remove leading $ and commas
+  const cleaned = t.replace(/^\$/, "").replace(/,/g, "");
+  // Handle trailing + (e.g. "100m+")
+  const hasPlus = cleaned.endsWith("+");
+  const core = hasPlus ? cleaned.slice(0, -1) : cleaned;
+
+  // If it's purely numeric (e.g., "1" or "1.5") assume millions
+  if (/^[0-9.]+$/.test(core)) {
+    return Number(core);
+  }
+
+  // k/m/b units
+  const mMatch = core.match(/^([0-9.]+)m$/);
+  if (mMatch) return Number(mMatch[1]);
+
+  const kMatch = core.match(/^([0-9.]+)k$/);
+  if (kMatch) return Number(kMatch[1]) / 1000;
+
+  const bMatch = core.match(/^([0-9.]+)b$/);
+  if (bMatch) return Number(bMatch[1]) * 1000;
+
+  // If value contains thousands separators like "1 000" or "1000000" try numeric parse and convert to millions
+  const num = Number(core.replace(/[^\d.-]/g, ""));
+  if (!isNaN(num)) {
+    // if number is very large assume it's in dollars -> convert to millions
+    if (num > 1000) return num / 1_000_000;
+    return num;
+  }
+
+  return null;
+}
+
+// Helper: parse range string into min/max in millions
+function parseInvestmentRangeToMillions(rangeStr: string): { min?: number; max?: number } {
+  if (!rangeStr || typeof rangeStr !== "string") return {};
+  // Normalize like "$0-1M", "0-1M", "$1M+", "$100k-$1M"
+  const cleaned = rangeStr.trim();
+  // Replace unicode minus with hyphen
+  const normalized = cleaned.replace(/\u2212/g, "-");
+
+  // If contains dash
+  const dashParts = normalized.split("-").map((p) => p.trim()).filter(Boolean);
+  if (dashParts.length === 2) {
+    const left = dashParts[0];
+    const right = dashParts[1].replace(/\+$/, ""); // strip trailing +
+    const min = parseMoneyTokenToMillions(left);
+    const max = parseMoneyTokenToMillions(right);
+    const result: { min?: number; max?: number } = {};
+    if (min !== null) result.min = min;
+    if (max !== null) result.max = max;
+    return result;
+  }
+
+  // If ends with + (e.g. "100M+")
+  if (normalized.endsWith("+")) {
+    const token = normalized.slice(0, -1).trim();
+    const min = parseMoneyTokenToMillions(token);
+    return min !== null ? { min } : {};
+  }
+
+  // Single token like "$1M" or "500k"
+  const single = parseMoneyTokenToMillions(normalized);
+  if (single !== null) return { min: single };
+
+  return {};
+}
 // Export cache functions for use in routes
 export { getCachedAnalytics, setCachedAnalytics };
 
@@ -4209,162 +4278,125 @@ export class SupabaseStorage implements IStorage {
       type?: string;
       location?: string;
       investmentRange?: string;
-      sweetSpot?: string;
+      sweetSpot?: string | number;
     },
   ): Promise<Investor[]> {
-    let query = supabase.from("investors").select("*");
-
+    console.log("storage.getInvestors called. filters:", filters);
+  
+    // Use admin client for reliability
+    let query: any = supabaseAdmin.from("investors").select("*").range(offset, offset + limit - 1);
+  
+    // Text search
     if (filters?.search) {
       query = query.or(
         `name.ilike.%${filters.search}%,profile.ilike.%${filters.search}%,current_position.ilike.%${filters.search}%`,
       );
     }
-
+  
+    // Type filter
     if (filters?.type && filters.type !== "all") {
       query = query.eq("profile", filters.type);
     }
-
+  
+    // Location filter
     if (filters?.location) {
       query = query.ilike("location", `%${filters.location}%`);
     }
-
+  
+    // Investment range filter (supports "$0-1M", "$1-5M", "100k-1M", "100M+")
     if (filters?.investmentRange && filters.investmentRange !== "all") {
-      const [minRange, maxRange] = filters.investmentRange
-        .split("-")
-        .map(Number);
-
-      if (maxRange) {
-        // For range filters: investment_min must match the range START exactly, investment_max must be within range
-        // For "$1-5M" filter: investment_min = 1 AND investment_max <= 5
-        // For "$5-10M" filter: investment_min = 5 AND investment_max <= 10
-        query = query
-          .eq("investment_min", minRange)
-          .gte("investment_max", minRange)
-          .lte("investment_max", maxRange);
-
-        // Only keep investors with reasonable values (in millions format, not dollars)
-        query = query.lte("investment_min", 100);
-      } else {
-        // For single values like "100M+": investment_min >= minRange (investors who START at $100M+)
-        // Only include values in millions format (< 1000) to exclude dollar values
-        query = query
-          .gte("investment_min", minRange)
-          .lt("investment_min", 1000);
+      const { min, max } = parseInvestmentRangeToMillions(filters.investmentRange);
+  
+      // Database fields are assumed to be in millions for investment_min/investment_max
+      if (min !== undefined && max !== undefined) {
+        query = query.gte("investment_min", min).lte("investment_max", max);
+      } else if (min !== undefined) {
+        // If only min present (e.g., "100M+"), filter for investment_min >= min
+        query = query.gte("investment_min", min);
       }
     }
-
-    if (filters?.sweetSpot && filters.sweetSpot !== "all") {
-      const [minSpot, maxSpot] = filters.sweetSpot.split("-").map(Number);
-      if (maxSpot) {
-        query = query
-          .gte("sweet_spot", minSpot * 1000000)
-          .lte("sweet_spot", maxSpot * 1000000);
-      } else {
-        query = query.gte("sweet_spot", minSpot * 1000000);
+  
+    // Sweet spot filter - accepts number or numeric string
+    if (filters?.sweetSpot !== undefined && filters.sweetSpot !== null && filters.sweetSpot !== "all") {
+      const s = filters.sweetSpot;
+      const numeric = typeof s === "number" ? s : Number(String(s).replace(/[, ]+/g, ""));
+      if (!isNaN(numeric)) {
+        // Many sweet_spot DB values are whole numbers (or dollars). First try direct equality,
+        // then fallback to range tolerance (exact equality is preserved here).
+        query = query.eq("sweet_spot", numeric);
+      } else if (typeof s === "string") {
+        query = query.ilike("sweet_spot", `%${s}%`);
       }
     }
-
-    const { data, error } = await query
-      .order("id", { ascending: true })
-      .range(offset, offset + limit - 1);
-
+  
+    const { data, error } = await query;
+  
     if (error) {
-      console.error("Error fetching investors:", error);
+      console.error("Supabase error in getInvestors:", error);
       return [];
     }
-
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      url: item.url,
-      name: item.name,
-      type: item.type,
-      profile: item.profile,
-      location: item.location,
-      phoneNumber: item.phone_number,
-      connections: item.connections,
-      imagePath: item.image_path,
-      currentPosition: item.current_position,
-      investmentMin: item.investment_min,
-      investmentMax: item.investment_max,
-      sweetSpot: item.sweet_spot,
-      currentFundSize: item.current_fund_size,
-      ranking: item.ranking,
-      experiences: item.experiences,
-      education: item.education,
-      investments: item.investments,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-    }));
+  
+    console.log(`✅ getInvestors returned ${data?.length || 0} records`);
+    return data || [];
   }
+  
 
   async getInvestorsCount(filters?: {
     search?: string;
     type?: string;
     location?: string;
     investmentRange?: string;
-    sweetSpot?: string;
+    sweetSpot?: string | number;
   }): Promise<number> {
-    let query = supabase
-      .from("investors")
-      .select("*", { count: "exact", head: true });
-
+    console.log("storage.getInvestorsCount called. filters:", filters);
+  
+    // Use admin client to keep behaviour identical to getInvestors
+    let query: any = supabaseAdmin.from("investors").select("*", { count: "exact", head: true });
+  
     if (filters?.search) {
       query = query.or(
         `name.ilike.%${filters.search}%,profile.ilike.%${filters.search}%,current_position.ilike.%${filters.search}%`,
       );
     }
-
+  
     if (filters?.type && filters.type !== "all") {
       query = query.eq("profile", filters.type);
     }
-
+  
     if (filters?.location) {
       query = query.ilike("location", `%${filters.location}%`);
     }
-
+  
+    // Investment range parsing + filter (same logic as getInvestors)
     if (filters?.investmentRange && filters.investmentRange !== "all") {
-      const [minRange, maxRange] = filters.investmentRange
-        .split("-")
-        .map(Number);
-
-      if (maxRange) {
-        // For range filters: investment_min must match the range START exactly, investment_max must be within range
-        // For "$1-5M" filter: investment_min = 1 AND investment_max <= 5
-        // For "$5-10M" filter: investment_min = 5 AND investment_max <= 10
-        query = query
-          .eq("investment_min", minRange)
-          .gte("investment_max", minRange)
-          .lte("investment_max", maxRange);
-
-        // Only keep investors with reasonable values (in millions format, not dollars)
-        query = query.lte("investment_min", 100);
-      } else {
-        // For single values like "100M+": investment_min >= minRange (investors who START at $100M+)
-        // Only include values in millions format (< 1000) to exclude dollar values
-        query = query
-          .gte("investment_min", minRange)
-          .lt("investment_min", 1000);
+      const { min, max } = parseInvestmentRangeToMillions(filters.investmentRange);
+  
+      if (min !== undefined && max !== undefined) {
+        query = query.gte("investment_min", min).lte("investment_max", max);
+      } else if (min !== undefined) {
+        query = query.gte("investment_min", min);
       }
     }
-
-    if (filters?.sweetSpot && filters.sweetSpot !== "all") {
-      const [minSpot, maxSpot] = filters.sweetSpot.split("-").map(Number);
-      if (maxSpot) {
-        query = query
-          .gte("sweet_spot", minSpot * 1000000)
-          .lte("sweet_spot", maxSpot * 1000000);
-      } else {
-        query = query.gte("sweet_spot", minSpot * 1000000);
+  
+    // Sweet spot (consistent with getInvestors)
+    if (filters?.sweetSpot !== undefined && filters.sweetSpot !== null && filters.sweetSpot !== "all") {
+      const s = filters.sweetSpot;
+      const numeric = typeof s === "number" ? s : Number(String(s).replace(/[, ]+/g, ""));
+      if (!isNaN(numeric)) {
+        query = query.eq("sweet_spot", numeric);
+      } else if (typeof s === "string") {
+        query = query.ilike("sweet_spot", `%${s}%`);
       }
     }
-
+  
     const { count, error } = await query;
-
+  
     if (error) {
       console.error("Error counting investors:", error);
       return 0;
     }
-
+  
+    console.log(` getInvestorsCount => ${count || 0}`);
     return count || 0;
   }
 
