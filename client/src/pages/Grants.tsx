@@ -96,7 +96,7 @@ export default function Grants() {
     return params.toString();
   };
 
-  // Fetch grants data
+  // Fetch grants data (no caching)
   const { data: grants, isLoading } = useQuery({
     queryKey: [
       "/api/grants",
@@ -112,6 +112,9 @@ export default function Grants() {
       if (!response.ok) throw new Error("Failed to fetch grants");
       return response.json();
     },
+    staleTime: 0, // Disable caching for grants
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Debug logging for grants data
@@ -167,7 +170,7 @@ export default function Grants() {
     }
   }, [grants]);
 
-  // Fetch grants count with filters
+  // Fetch grants count with filters (no caching)
   const { data: countData } = useQuery({
     queryKey: [
       "/api/grants/count",
@@ -187,6 +190,9 @@ export default function Grants() {
       if (!response.ok) throw new Error("Failed to fetch grants count");
       return response.json();
     },
+    staleTime: 0, // Disable caching for grants count
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   
   // Fetch available programmes

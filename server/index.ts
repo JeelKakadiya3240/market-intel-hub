@@ -23,16 +23,7 @@ function validateEnvironment(): void {
   console.log('✅ Environment validation completed');
 }
 
-// Database warm-up function to prevent cold start timeouts
-async function warmupDatabase() {
-  try {
-    const storage = new SupabaseStorage();
-    await storage.getGrants(1, 0); // Simple warm-up query
-    console.log('✅ Database warmed up successfully');
-  } catch (error) {
-    console.log('⚠️ Database warm-up failed:', error instanceof Error ? error.message : 'Unknown error');
-  }
-}
+
 
 const app = express();
 app.use(express.json());
@@ -153,9 +144,6 @@ app.use((req, res, next) => {
       log(`🚀 Running in production mode`);
     }
     
-    // Warm up database to prevent cold start timeouts
-    log(`🔥 Warming up database connection...`);
-    await warmupDatabase();
   }).on('error', (error: any) => {
     console.error(`❌ Server startup error:`, error.message);
     
